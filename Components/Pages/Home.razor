@@ -1,0 +1,153 @@
+﻿@page "/"
+@using PracticaExamenWeb2.Services
+@using PracticaExamenWeb2.Data
+@inject IVisitService VisitService
+
+<PageTitle>Gestión de Visitas</PageTitle>
+
+<h1>Gestión de Visitas</h1>
+
+<!-- Botón para agregar una nueva visita -->
+<button class="btn btn-primary mb-3" @onclick="ShowAddForm">Registrar Nueva Visita</button>
+
+<!-- Tabla de visitas -->
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Nombre</th>
+            <th>Apellido</th>
+            <th>Teléfono</th>
+            <th>Correo Electrónico</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (visitas != null && visitas.Any())
+        {
+            @foreach (var visita in visitas)
+            {
+                <tr>
+                    <td>@visita.Nombre</td>
+                    <td>@visita.Apellido</td>
+                    <td>@visita.Telefono</td>
+                    <td>@visita.CorreoElectronico</td>
+                    <td>
+                        <button class="btn btn-warning btn-sm" @onclick="() => ShowEditForm(visita)">Editar</button>
+                        <button class="btn btn-danger btn-sm" @onclick="() => DeleteVisit(visita.Id)">Eliminar</button>
+                    </td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="5" class="text-center">No hay visitas registradas</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- Formulario para agregar o editar visitas -->
+@if (showForm)
+{
+    <div class="card mt-3">
+        <div class="card-body">
+            <h3>@(editMode ? "Editar Visita" : "Registrar Nueva Visita")</h3>
+            <EditForm Model="currentVisit" OnValidSubmit="SaveVisit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="mb-3">
+                    <label for="nombre">Nombre</label>
+                    <InputText id="nombre" class="form-control" @bind-Value="currentVisit.Nombre" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="apellido">Apellido</label>
+                    <InputText id="apellido" class="form-control" @bind-Value="currentVisit.Apellido" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="telefono">Teléfono</label>
+                    <InputText id="telefono" class="form-control" @bind-Value="currentVisit.Telefono" />
+                </div>
+
+                <div class="mb-3">
+                    <label for="correo">Correo Electrónico</label>
+                    <InputText id="correo" class="form-control" @bind-Value="currentVisit.CorreoElectronico" />
+                </div>
+
+                <button type="submit" class="btn btn-success">@((editMode ? "Actualizar" : "Guardar"))</button>
+                <button type="button" class="btn btn-secondary ms-2" @onclick="CancelForm">Cancelar</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Visita> visitas;
+    private Visita currentVisit = new Visita();
+    private bool showForm = false;
+    private bool editMode = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadVisits();
+    }
+
+    private async Task LoadVisits()
+    {
+        visitas = await VisitService.GetAllVisitsAsync();
+        await InvokeAsync(StateHasChanged); // Forzar actualización de la UI
+    }
+
+    private void ShowAddForm()
+    {
+        currentVisit = new Visita();
+        showForm = true;
+        editMode = false;
+        StateHasChanged(); // Actualizar UI inmediatamente
+    }
+
+    private void ShowEditForm(Visita visita)
+    {
+        currentVisit = new Visita
+            {
+                Id = visita.Id,
+                Nombre = visita.Nombre,
+                Apellido = visita.Apellido,
+                Telefono = visita.Telefono,
+                CorreoElectronico = visita.CorreoElectronico
+            };
+        showForm = true;
+        editMode = true;
+        StateHasChanged(); // Actualizar UI inmediatamente
+    }
+
+    private async Task SaveVisit()
+    {
+        if (editMode)
+        {
+            await VisitService.UpdateVisitAsync(currentVisit);
+        }
+        else
+        {
+            await VisitService.AddVisitAsync(currentVisit);
+        }
+
+        showForm = false;
+        await LoadVisits();
+    }
+
+    private async Task DeleteVisit(int id)
+    {
+        await VisitService.DeleteVisitAsync(id);
+        await LoadVisits();
+    }
+
+    private void CancelForm()
+    {
+        showForm = false;
+        StateHasChanged(); // Actualizar UI inmediatamente
+    }
+}
